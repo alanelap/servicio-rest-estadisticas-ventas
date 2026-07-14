@@ -20,13 +20,16 @@ services:
       MAX_REQUEST_BODY_BYTES: "${MAX_REQUEST_BODY_BYTES:-16384}"
       POLARS_MAX_THREADS: "${POLARS_MAX_THREADS:-4}"
     ports:
+      # La publicación se limita al equipo local salvo decisión explícita del operador.
       - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-8000}:${PORT:-8000}"
     volumes:
+      # La fuente es inmutable para el contenedor; solo los derivados usan volumen escribible.
       - ./data/ventas.csv:/app/data/ventas.csv:ro
       - processed-data:/app/data/processed
     restart: unless-stopped
     init: true
     cap_drop:
+      # La API no requiere capabilities de Linux para procesar ni servir datos.
       - ALL
     security_opt:
       - no-new-privileges:true
@@ -42,4 +45,5 @@ services:
       retries: 3
 
 volumes:
+  # Persiste el snapshot entre recreaciones sin versionar datos reales en Git.
   processed-data:

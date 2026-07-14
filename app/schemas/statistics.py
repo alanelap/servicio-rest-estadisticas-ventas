@@ -1,10 +1,14 @@
-"""Esquemas de respuestas exitosas."""
+"""Describe las respuestas exitosas publicadas en el contrato OpenAPI."""
 
 from marshmallow import Schema, fields
 
 
 class StatisticsSchema(Schema):
-    """Siete estadísticas públicas sobre MONTO APLICADO."""
+    """Representa las siete estadísticas públicas sobre ``MONTO APLICADO``.
+
+    Cuando una consulta no contiene filas, promedio, extremos, mediana y
+    desviación estándar aceptan ``null``; suma y conteo siempre son numéricos.
+    """
 
     suma = fields.Float(required=True)
     conteo = fields.Integer(required=True)
@@ -16,6 +20,6 @@ class StatisticsSchema(Schema):
 
 
 class StatusSchema(Schema):
-    """Respuesta mínima de salud/preparación."""
+    """Representa la respuesta mínima de los endpoints de estado."""
 
     status = fields.String(required=True)

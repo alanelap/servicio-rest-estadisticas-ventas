@@ -427,6 +427,22 @@ mediante `python -m dotenv run`, como en el ejemplo anterior.
 `WORKERS * POLARS_MAX_THREADS` debe ajustarse a los núcleos disponibles para evitar
 sobreasignación.
 
+### Convenciones de documentación del código
+
+El código de producción se documenta en español siguiendo PEP 257 y la estructura Google-style:
+
+- cada módulo declara su responsabilidad y sus límites;
+- clases, funciones y métodos públicos explican su contrato observable;
+- helpers privados complejos documentan invariantes, efectos laterales y posibles errores;
+- `Args`, `Returns` y `Raises` se incluyen cuando aclaran información que el tipado no expresa;
+- los comentarios se reservan para concurrencia, atomicidad, seguridad y decisiones no evidentes;
+- las pruebas usan nombres descriptivos y documentan sus fixtures y helpers reutilizables.
+
+Ruff verifica automáticamente la presencia de docstrings en módulos y API pública, además de su
+formato, durante `make lint` y en GitHub Actions. La pertinencia de comentarios y docstrings en
+helpers privados se comprueba mediante revisión de código. Esta documentación interna complementa,
+pero no sustituye, el contrato HTTP de Swagger/OpenAPI.
+
 ## Docker y operación
 
 ```bash

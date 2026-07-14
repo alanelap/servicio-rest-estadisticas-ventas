@@ -1,4 +1,4 @@
-"""Manejadores uniformes para excepciones de dominio y HTTP."""
+"""Traduce excepciones de aplicación y HTTP al contrato JSON uniforme."""
 
 from __future__ import annotations
 
@@ -24,10 +24,19 @@ _HTTP_DETAILS = {
 
 
 def register_error_handlers(app: Flask) -> None:
-    """Registra todos los códigos controlados y una barrera para fallos inesperados."""
+    """Registra los manejadores de errores esperados y la barrera de seguridad.
+
+    Args:
+        app: Instancia Flask en la que se instalarán los manejadores.
+
+    Los errores inesperados se registran con su traza para diagnóstico, pero la
+    respuesta pública utiliza un mensaje genérico para no revelar información de
+    implementación.
+    """
 
     @app.errorhandler(ApplicationError)
     def handle_application_error(error: ApplicationError) -> tuple[Response, int]:
+        """Convierte un error controlado sin perder sus metadatos públicos."""
         return _response(
             detail=error.detail,
             status=error.status_code,
@@ -37,13 +46,16 @@ def register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(HTTPException)
     def handle_http_error(error: HTTPException) -> tuple[Response, int]:
+        """Normaliza una excepción HTTP producida por Flask o Werkzeug."""
         original_status = error.code or 500
+        # Flask-Smorest usa 422 para validación; el contrato oficial exige 400.
         status = 400 if original_status == 422 else original_status
         detail = _HTTP_DETAILS.get(status, "La solicitud no pudo ser procesada")
         return _response(detail=detail, status=status)
 
     @app.errorhandler(Exception)
     def handle_unexpected_error(error: Exception) -> tuple[Response, int]:
+        """Registra un fallo imprevisto y devuelve una respuesta sin datos sensibles."""
         _LOGGER.exception(
             "Error no controlado",
             extra={
@@ -61,6 +73,17 @@ def _response(
     error_code: str | None = None,
     error_label: str | None = None,
 ) -> tuple[Response, int]:
+    """Crea una respuesta Flask a partir de un problema normalizado.
+
+    Args:
+        detail: Explicación segura para el consumidor de la API.
+        status: Código de estado HTTP de la respuesta.
+        error_code: Código de negocio opcional que reemplaza el valor por defecto.
+        error_label: Etiqueta opcional que reemplaza el valor por defecto.
+
+    Returns:
+        La respuesta JSON y el código HTTP que Flask debe enviar.
+    """
     payload: dict[str, Any] = build_problem(
         detail=detail,
         status=status,

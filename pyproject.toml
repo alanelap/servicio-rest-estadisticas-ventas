@@ -37,10 +37,16 @@ line-length = 100
 extend-exclude = ["data"]
 
 [tool.ruff.lint]
-select = ["B", "E4", "E7", "E9", "F", "I", "UP"]
+select = ["B", "D", "E4", "E7", "E9", "F", "I", "UP"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/test_*.py" = ["D103"]
 
 [tool.ruff.format]
 docstring-code-format = true

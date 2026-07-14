@@ -1,4 +1,10 @@
-"""Ingesta perezosa, vectorizada, auditable y publicada de forma atómica."""
+"""Ingesta perezosa, vectorizada y auditable del conjunto de ventas.
+
+El servicio convierte el CSV autorizado en un snapshot analítico compuesto por
+Parquet, estadísticas, metadatos y un informe de calidad. La publicación usa un
+identificador de generación común y deja los metadatos para el final, de modo
+que los lectores nunca confundan una generación parcial con una vigente.
+"""
 
 from __future__ import annotations
 
@@ -48,7 +54,14 @@ _UUID_PATTERN: Final = (
 
 @dataclass(frozen=True, slots=True)
 class IngestionResult:
-    """Resultado no sensible del comando de ingesta."""
+    """Resumen no sensible de una ejecución de ingesta.
+
+    Attributes:
+        status: Resultado de la operación; ``procesado`` o ``sin_cambios``.
+        valid_rows: Cantidad de filas incorporadas al snapshot analítico.
+        discarded_rows: Cantidad de filas excluidas por reglas de calidad.
+        source_sha256: Huella SHA-256 del CSV evaluado.
+    """
 
     status: str
     valid_rows: int
@@ -56,11 +69,21 @@ class IngestionResult:
     source_sha256: str
 
     def to_dict(self) -> dict[str, Any]:
+        """Serializa el resultado para su presentación o registro.
+
+        Returns:
+            Diccionario compuesto únicamente por campos no sensibles.
+        """
         return asdict(self)
 
 
 class IngestionService:
-    """Normaliza el CSV con Polars y construye artefactos consistentes."""
+    """Normaliza el CSV con Polars y publica un snapshot consistente.
+
+    El servicio delimita el acceso al sistema de archivos mediante
+    ``allowed_root``, evita trabajos redundantes por contenido y configuración,
+    y serializa las ejecuciones concurrentes mediante un bloqueo de ingesta.
+    """
 
     def __init__(
         self,
@@ -73,6 +96,21 @@ class IngestionService:
         allowed_root: Path,
         stat_target_column: str,
     ) -> None:
+        """Configura las rutas y el contrato estadístico de la ingesta.
+
+        Args:
+            default_dataset_path: CSV usado cuando el llamador no especifica otro.
+            processed_path: Destino del dataset analítico en formato Parquet.
+            summary_path: Destino de las estadísticas globales precalculadas.
+            metadata_path: Destino del manifiesto que confirma la publicación.
+            quality_report_path: Destino del informe agregado de descartes.
+            allowed_root: Directorio al que deben pertenecer las fuentes admitidas.
+            stat_target_column: Columna contractual sobre la que se calculan las
+                estadísticas.
+
+        Raises:
+            RuntimeError: Si se configura una columna estadística no soportada.
+        """
         if stat_target_column not in {"MONTO APLICADO", "monto_aplicado"}:
             raise RuntimeError("STAT_TARGET_COLUMN solo admite 'MONTO APLICADO' en este contrato")
         self.default_dataset_path = default_dataset_path
@@ -84,14 +122,31 @@ class IngestionService:
         self.stat_target_column = stat_target_column
 
     def ingest(self, csv_path: Path | None = None, *, force: bool = False) -> IngestionResult:
-        """Procesa el CSV solo si cambió y publica metadatos como último commit."""
+        """Procesa un CSV y publica sus artefactos como una sola generación lógica.
 
+        Args:
+            csv_path: Fuente alternativa; usa ``default_dataset_path`` si se omite.
+            force: Si es ``True``, regenera el snapshot aunque la fuente esté vigente.
+
+        Returns:
+            Resumen de la generación publicada o de la omisión idempotente.
+
+        Raises:
+            IngestionError: Si la ruta no es segura, el CSV es inválido, cambia
+                durante el procesamiento o no pueden publicarse los artefactos.
+            OSError: Si falla la creación del directorio de salida o la lectura
+                inicial de los metadatos de la fuente.
+            TimeoutError: Si no es posible adquirir el bloqueo de ingesta dentro
+                del tiempo configurado.
+        """
         source_path = self._validated_source(csv_path or self.default_dataset_path)
         self.processed_path.parent.mkdir(parents=True, exist_ok=True)
 
         with ingestion_lock(self.processed_path):
             source_stat = source_path.stat()
             source_hash = sha256_file(source_path)
+            # Tamaño, mtime y hash hacen idempotente la operación sin confiar solo
+            # en marcas de tiempo susceptibles a copias o restauraciones.
             if not force and self._is_current(source_stat, source_hash):
                 metadata = read_json_object(self.metadata_path)
                 return IngestionResult(
@@ -108,8 +163,22 @@ class IngestionService:
                 raise IngestionError("No fue posible procesar y publicar el CSV") from exc
 
     def needs_ingestion(self, csv_path: Path | None = None) -> bool:
-        """Indica si faltan artefactos o cambió el contenido/configuración."""
+        """Determina si una fuente requiere una nueva generación.
 
+        Args:
+            csv_path: Fuente alternativa; usa ``default_dataset_path`` si se omite.
+
+        Returns:
+            ``True`` si falta o no coincide algún artefacto del snapshot.
+
+        Raises:
+            IngestionError: Si la fuente está fuera de la raíz autorizada, no existe,
+                no tiene extensión CSV o carece de permisos de lectura.
+            OSError: Si falla la consulta de metadatos o el cálculo de la huella de
+                la fuente.
+            TimeoutError: Si no es posible adquirir el bloqueo de ingesta dentro
+                del tiempo configurado.
+        """
         source_path = self._validated_source(csv_path or self.default_dataset_path)
         with ingestion_lock(self.processed_path):
             source_stat = source_path.stat()
@@ -118,12 +187,31 @@ class IngestionService:
     def _process(
         self, source_path: Path, source_stat: os.stat_result, source_hash: str
     ) -> IngestionResult:
+        """Construye y publica una generación nueva a partir de una fuente estable.
+
+        Args:
+            source_path: CSV previamente validado.
+            source_stat: Estado de la fuente observado al iniciar la operación.
+            source_hash: Huella de la fuente observada al iniciar la operación.
+
+        Returns:
+            Resultado de la generación recién publicada.
+
+        Raises:
+            IngestionError: Si falla la lectura, transformación, estadística o
+                publicación, o si la fuente cambia durante el proceso.
+            polars.exceptions.PolarsError: Si la evaluación inicial del reporte de
+                calidad falla antes de entrar al bloque de publicación. El método
+                público :meth:`ingest` traduce este error a ``IngestionError``.
+        """
         started = time.perf_counter()
         raw = self._scan_source(source_path)
         normalized = self._normalized_frame(raw)
         invalid_reasons = self._invalid_reasons()
         invalid_any = pl.any_horizontal(list(invalid_reasons.values()))
 
+        # Cada regla se agrega por separado para auditar la calidad; una misma fila
+        # puede contribuir a varios motivos, pero se descarta una sola vez.
         quality_row = (
             normalized.select(
                 pl.len().alias("total_rows"),
@@ -131,6 +219,7 @@ class IngestionService:
                 invalid_any.sum().alias("discarded_rows"),
                 *[expression.sum().alias(name) for name, expression in invalid_reasons.items()],
             )
+            # El motor streaming evita materializar millones de ventas en memoria.
             .collect(engine="streaming")
             .row(0, named=True)
         )
@@ -167,6 +256,7 @@ class IngestionService:
                 or sha256_file(source_path) != source_hash
             ):
                 raise IngestionError("El CSV cambió durante la ingesta; vuelva a intentarlo")
+            # El reemplazo atómico impide que un lector observe un Parquet parcial.
             os.replace(temporary_parquet, self.processed_path)
 
             processed_at = _utc_now()
@@ -204,6 +294,8 @@ class IngestionService:
             }
             atomic_write_json(self.summary_path, cache_payload)
             atomic_write_json(self.quality_report_path, quality_payload)
+            # Los metadatos son el marcador de commit: se publican al final para
+            # que validate_snapshot rechace cualquier generación incompleta.
             atomic_write_json(self.metadata_path, metadata_payload)
         except (OSError, pl.exceptions.PolarsError, StatisticsCalculationError, ValueError) as exc:
             temporary_parquet.unlink(missing_ok=True)
@@ -229,6 +321,19 @@ class IngestionService:
         )
 
     def _scan_source(self, source_path: Path) -> pl.LazyFrame:
+        """Abre el CSV perezosamente y valida su encabezado contractual.
+
+        Args:
+            source_path: Archivo CSV autorizado y existente.
+
+        Returns:
+            ``LazyFrame`` limitado a las columnas requeridas, con el alias de género
+            oficial normalizado.
+
+        Raises:
+            IngestionError: Si el archivo no puede leerse, contiene aliases ambiguos
+                o carece de columnas obligatorias.
+        """
         try:
             separator = self._detect_separator(source_path)
             raw = pl.scan_csv(
@@ -256,8 +361,18 @@ class IngestionService:
 
     @staticmethod
     def _detect_separator(source_path: Path) -> str:
-        """Detecta los formatos oficiales/sintéticos sin leer filas personales."""
+        """Detecta el separador sin leer registros personales.
 
+        Args:
+            source_path: CSV cuyo encabezado se inspeccionará.
+
+        Returns:
+            Punto y coma si es el delimitador predominante; coma en los demás casos,
+            incluido un empate.
+
+        Raises:
+            IngestionError: Si el encabezado no contiene delimitadores reconocibles.
+        """
         with source_path.open("rb") as stream:
             header = stream.readline(64 * 1024)
         semicolons = header.count(b";")
@@ -268,12 +383,23 @@ class IngestionService:
 
     @staticmethod
     def _normalized_frame(raw: pl.LazyFrame) -> pl.LazyFrame:
+        """Define la normalización tipada y los campos derivados de cada venta.
+
+        Args:
+            raw: Dataset de origen con todas las columnas contractuales como texto.
+
+        Returns:
+            Plan perezoso con nombres analíticos, fechas UTC, edad a la fecha de la
+            transacción y género textual.
+        """
         raw_sale_date = pl.col("FECHA").str.strip_chars()
         has_time = raw_sale_date.str.contains(r"[T ]\d{2}:\d{2}").fill_null(False)
         has_offset_suffix = raw_sale_date.str.contains(
             r"(?:[zZ]|[+-]\d{2}(?::?\d{2})?)$"
         ).fill_null(False)
         has_explicit_offset = has_time & has_offset_suffix
+        # Las fechas con offset conservan el instante declarado; las fechas sin zona
+        # se interpretan con el offset contractual fijo UTC-4 antes de pasar a UTC.
         aware_utc = (
             pl.when(has_explicit_offset)
             .then(raw_sale_date)
@@ -319,6 +445,7 @@ class IngestionService:
                 & (pl.col("GÉNERO").str.strip_chars().str.len_chars() > 0)
             ).alias("_genero_informado"),
         )
+        # La edad se calcula a la fecha de la venta, no con respecto al día actual.
         birthday_pending = (
             pl.col("_fecha_local").dt.month() < pl.col("fecha_nacimiento").dt.month()
         ) | (
@@ -345,6 +472,12 @@ class IngestionService:
 
     @staticmethod
     def _invalid_reasons() -> dict[str, pl.Expr]:
+        """Construye las reglas vectorizadas de descarte de filas.
+
+        Returns:
+            Mapa entre el código estable de cada regla y una expresión booleana que
+            identifica las filas inválidas. Las expresiones pueden superponerse.
+        """
         return {
             "fecha_invalida": pl.col("fecha").is_null(),
             "canal_invalido": pl.col("canal").is_null()
@@ -371,6 +504,18 @@ class IngestionService:
         }
 
     def _validated_source(self, raw_path: Path) -> Path:
+        """Resuelve y valida una fuente sin permitir escapes de directorio.
+
+        Args:
+            raw_path: Ruta absoluta o relativa a ``allowed_root``.
+
+        Returns:
+            Ruta absoluta, resuelta y autorizada del CSV.
+
+        Raises:
+            IngestionError: Si la ruta escapa de la raíz autorizada, no apunta a un
+                archivo CSV o carece de permiso de lectura.
+        """
         path = raw_path.expanduser()
         if not path.is_absolute():
             path = (self.allowed_root / path).resolve()
@@ -391,6 +536,16 @@ class IngestionService:
         return path
 
     def _is_current(self, source_stat: os.stat_result, source_hash: str) -> bool:
+        """Comprueba si los artefactos publicados corresponden a la fuente.
+
+        Args:
+            source_stat: Estado actual del CSV de origen.
+            source_hash: Huella SHA-256 actual del CSV de origen.
+
+        Returns:
+            ``True`` solo si el snapshot es íntegro, compatible y coincide en tamaño,
+            fecha de modificación y contenido con la fuente.
+        """
         required_artifacts = (
             self.processed_path,
             self.summary_path,
@@ -421,4 +576,9 @@ class IngestionService:
 
 
 def _utc_now() -> str:
+    """Obtiene la hora UTC en el formato estable usado por los manifiestos.
+
+    Returns:
+        Marca ISO 8601 con microsegundos y sufijo ``Z``.
+    """
     return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")

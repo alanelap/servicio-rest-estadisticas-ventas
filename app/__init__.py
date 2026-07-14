@@ -1,4 +1,10 @@
-"""Application factory del servicio Cruz Morada."""
+"""Construcción y cableado de la aplicación Flask del servicio Cruz Morada.
+
+El módulo expone una *application factory* para reutilizar la misma composición
+en producción, comandos CLI y pruebas. Cada aplicación conserva su configuración
+y extensiones, aunque el logging raíz y ciertas variables de entorno son efectos
+compartidos por todo el proceso.
+"""
 
 from __future__ import annotations
 
@@ -21,8 +27,30 @@ from app.services.statistics_service import StatisticsService
 
 
 def create_app(test_config: dict[str, Any] | None = None) -> Flask:
-    """Crea una aplicación aislada y explícitamente cableada."""
+    """Crea y configura una instancia del servicio REST.
 
+    La factoría parte de los valores de :class:`app.config.Config`, evaluados al
+    importar su módulo, instala observabilidad y manejo de errores, construye
+    los servicios de dominio y registra la API y los comandos administrativos.
+    ``test_config`` se aplica inicialmente sobre esos valores; después se fuerzan
+    ``DEBUG=False`` en producción y ``MAX_CONTENT_LENGTH`` a partir de
+    ``MAX_REQUEST_BODY_BYTES``.
+
+    Args:
+        test_config: Sobrescrituras opcionales de la configuración de Flask.
+
+    Returns:
+        Aplicación Flask completamente configurada y lista para atender
+        solicitudes o ejecutar comandos CLI.
+
+    Raises:
+        RuntimeError: Si el límite de cuerpo HTTP no es positivo o alguna
+            configuración requerida por los componentes es inválida.
+        ValueError: Si el nivel de logging no es válido o un valor esperado como
+            entero no puede convertirse.
+        TypeError: Si una sobrescritura usa un tipo incompatible con la
+            conversión requerida por la factoría.
+    """
     app = Flask(__name__)
     app.config.from_object(Config)
     if test_config:

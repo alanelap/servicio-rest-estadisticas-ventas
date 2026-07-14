@@ -1,4 +1,9 @@
-"""Logging JSON y middleware de correlación sin datos personales."""
+"""Logging JSON, correlación HTTP y reducción de exposición accidental.
+
+Solo se serializa una lista explícita de atributos adicionales. Como defensa en
+profundidad, se redactan UUID canónicos con guiones y RUN escritos con puntos;
+este filtrado de patrones no sustituye evitar datos personales desde el origen.
+"""
 
 from __future__ import annotations
 
@@ -32,9 +37,18 @@ _EXTRA_FIELDS = {
 
 
 class JsonFormatter(logging.Formatter):
-    """Serializa un subconjunto explícito de atributos para evitar filtrar PII."""
+    """Produce eventos JSON con un conjunto explícitamente permitido de atributos."""
 
     def format(self, record: logging.LogRecord) -> str:
+        """Convierte un registro de logging en una línea JSON redactada.
+
+        Args:
+            record: Registro estándar que contiene el mensaje y atributos extra.
+
+        Returns:
+            Documento JSON compacto con timestamp UTC, nivel, logger, mensaje y
+            los campos adicionales permitidos presentes en ``record``.
+        """
         payload: dict[str, Any] = {
             "timestamp": datetime.now(UTC)
             .isoformat(timespec="milliseconds")
@@ -57,17 +71,42 @@ class JsonFormatter(logging.Formatter):
 
 
 def _redact_personal_values(value: str) -> str:
+    """Sustituye UUID canónicos y RUN con puntos por marcadores fijos.
+
+    Args:
+        value: Texto que podría contener identificadores personales.
+
+    Returns:
+        Texto con las coincidencias cubiertas por ``_UUID_VALUE`` y
+        ``_RUN_VALUE`` redactadas. Otros formatos permanecen sin cambios.
+    """
     redacted = _UUID_VALUE.sub("[UUID_REDACTADO]", value)
     return _RUN_VALUE.sub("[RUN_REDACTADO]", redacted)
 
 
 def _new_request_id() -> str:
+    """Genera un identificador interno de correlación no aportado por el cliente.
+
+    Returns:
+        Identificador con prefijo ``req_`` y 32 dígitos hexadecimales aleatorios.
+    """
     return f"req_{uuid4().hex}"
 
 
 def configure_logging(app: Flask) -> None:
-    """Configura una salida JSON única con nivel por entorno."""
+    """Configura logging estructurado y desactiva el logger HTTP de Werkzeug.
 
+    Args:
+        app: Aplicación cuya clave ``LOG_LEVEL`` determina el nivel raíz.
+
+    Note:
+        La función reemplaza los handlers del logger raíz del proceso. Debe
+        invocarse durante la inicialización, antes de atender solicitudes.
+
+    Raises:
+        ValueError: Si ``LOG_LEVEL`` no corresponde a un nivel reconocido por
+            el módulo estándar :mod:`logging`.
+    """
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())
     root = logging.getLogger()
@@ -82,10 +121,24 @@ def configure_logging(app: Flask) -> None:
 
 
 def register_request_hooks(app: Flask) -> None:
-    """Agrega request ID, medición y cabeceras defensivas."""
+    """Registra correlación, límite temprano, métricas y cabeceras defensivas.
+
+    Args:
+        app: Aplicación Flask sobre la que se instalan los hooks de solicitud.
+
+    Los identificadores entregados por clientes se reutilizan si satisfacen la
+    lista de caracteres y no coinciden con los formatos de UUID o RUN cubiertos
+    por los patrones de redacción; en cualquier otro caso se genera uno interno.
+    """
 
     @app.before_request
     def start_request() -> None:
+        """Inicializa el contexto y rechaza cuerpos evidentemente grandes.
+
+        Raises:
+            RequestEntityTooLarge: Si existe transferencia codificada o el
+                tamaño declarado excede ``MAX_CONTENT_LENGTH``.
+        """
         supplied = request.headers.get("X-Request-ID", "")
         supplied_is_safe = bool(_SAFE_REQUEST_ID.fullmatch(supplied)) and not (
             _UUID_VALUE.search(supplied) or _RUN_VALUE.search(supplied)
@@ -100,6 +153,15 @@ def register_request_hooks(app: Flask) -> None:
 
     @app.after_request
     def finish_request(response: Response) -> Response:
+        """Agrega cabeceras seguras y registra la finalización de la solicitud.
+
+        Args:
+            response: Respuesta construida por la vista o el manejador de error.
+
+        Returns:
+            La misma respuesta enriquecida con correlación, políticas del
+            navegador y, para endpoints de negocio, prohibición de caché.
+        """
         response.headers["X-Request-ID"] = getattr(g, "request_id", _new_request_id())
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"

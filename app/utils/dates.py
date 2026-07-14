@@ -1,4 +1,9 @@
-"""Conversión determinista de fechas del contrato a UTC."""
+"""Conversión determinista de límites temporales del contrato a UTC.
+
+Las fechas sin zona horaria se interpretan con el offset comercial fijo UTC-4
+definido por el enunciado, sin depender de la zona ni del horario de verano del
+sistema operativo.
+"""
 
 from __future__ import annotations
 
@@ -16,19 +21,37 @@ _DATE_ONLY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 @dataclass(frozen=True, slots=True)
 class ParsedDateBoundary:
-    """Instante UTC y semántica del límite superior."""
+    """Límite temporal normalizado para construir filtros de dominio.
+
+    Attributes:
+        value: Instante consciente de zona horaria expresado en UTC.
+        exclusive: Indica que ``value`` no forma parte del intervalo. Se usa
+            para representar una fecha superior inclusiva como la medianoche
+            siguiente exclusiva.
+    """
 
     value: datetime
     exclusive: bool = False
 
 
 def parse_iso_boundary(raw: object, *, upper: bool, filter_name: str) -> ParsedDateBoundary:
-    """Interpreta fecha/fecha-hora ISO; los valores sin offset usan UTC-4 fijo.
+    """Interpreta una fecha o fecha-hora ISO 8601 como límite en UTC.
 
     Una fecha usada como límite superior representa el día completo y se convierte
     a la medianoche siguiente exclusiva, equivalente a un límite inclusivo del día.
-    """
 
+    Args:
+        raw: Valor recibido desde el contrato HTTP; debe ser texto no vacío.
+        upper: Indica si el valor corresponde al límite superior del intervalo.
+        filter_name: Nombre público del filtro, utilizado en mensajes de error.
+
+    Returns:
+        Límite normalizado a UTC junto con su semántica inclusiva o exclusiva.
+
+    Raises:
+        ContractValidationError: Si el valor no es texto ISO 8601 válido o la
+            operación de fecha excede el rango admitido.
+    """
     if not isinstance(raw, str) or not raw.strip():
         raise ContractValidationError(
             f"El valor de {filter_name} debe ser una fecha ISO 8601 válida"

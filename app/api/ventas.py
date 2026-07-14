@@ -1,4 +1,4 @@
-"""Endpoint contractual de estadísticas de ventas."""
+"""Endpoint HTTP para calcular estadísticas sobre las ventas filtradas."""
 
 from __future__ import annotations
 
@@ -161,7 +161,13 @@ _VALIDATION_ERROR_EXAMPLE = {
 
 @blp.route("/ventas")
 class SalesStatisticsView(MethodView):
-    """GET precomputado/dinámico y POST de filtros dinámicos."""
+    """Ofrece consultas estadísticas mediante parámetros GET o un cuerpo POST.
+
+    Ambos métodos producen el mismo contrato de respuesta. GET delega sus parámetros
+    al servicio de filtros; POST verifica primero presencia, tipo de medio y sintaxis
+    JSON, y luego delega la estructura de filtros. El cálculo se resuelve en servicios
+    de aplicación y los filtros siempre se combinan con semántica AND.
+    """
 
     @typed_decorator(
         blp.doc(
@@ -192,6 +198,20 @@ class SalesStatisticsView(MethodView):
     @typed_decorator(blp.alt_response(500, schema=ErrorSchema, description="Error interno"))
     @typed_decorator(blp.alt_response(503, schema=ErrorSchema, description="Datos no preparados"))
     def get(self) -> dict[str, Any]:
+        """Calcula estadísticas con los filtros presentes en la URL.
+
+        Sin parámetros reutiliza el resumen global preparado por el repositorio;
+        con parámetros solicita un cálculo sobre el subconjunto coincidente.
+
+        Returns:
+            Las siete estadísticas públicas serializables como JSON.
+
+        Raises:
+            ContractValidationError: Si algún parámetro incumple el contrato.
+            DataNotReadyError: Si los datos analíticos no están disponibles.
+            StatisticsCalculationError: Si un agregado no puede representarse como
+                un número finito.
+        """
         filter_service, statistics_service = _services()
         filters = filter_service.from_get(request.args)
         return statistics_service.calculate(filters).to_dict()
@@ -227,7 +247,23 @@ class SalesStatisticsView(MethodView):
     @typed_decorator(blp.alt_response(500, schema=ErrorSchema, description="Error interno"))
     @typed_decorator(blp.alt_response(503, schema=ErrorSchema, description="Datos no preparados"))
     def post(self) -> dict[str, Any]:
+        """Calcula estadísticas a partir de la lista JSON de filtros.
+
+        Returns:
+            Las siete estadísticas públicas serializables como JSON.
+
+        Raises:
+            ContractValidationError: Si falta el cuerpo o sus filtros violan el
+                contrato.
+            werkzeug.exceptions.BadRequest: Si el cuerpo no contiene JSON válido.
+            UnsupportedMediaType: Si el tipo de medio no es compatible con JSON.
+            DataNotReadyError: Si los datos analíticos no están disponibles.
+            StatisticsCalculationError: Si un agregado no puede representarse como
+                un número finito.
+        """
         filter_service, statistics_service = _services()
+        # Se valida el cuerpo bruto antes de parsearlo para distinguir un JSON
+        # ausente de un documento JSON inválido en el contrato público.
         raw_body = request.get_data(cache=True)
         if not raw_body:
             raise ContractValidationError("El cuerpo JSON es obligatorio")
@@ -239,6 +275,12 @@ class SalesStatisticsView(MethodView):
 
 
 def _services() -> tuple[FilterService, StatisticsService]:
+    """Obtiene los servicios asociados al contexto de la aplicación actual.
+
+    Returns:
+        El servicio de normalización de filtros y el servicio de estadísticas
+        registrados por la factoría Flask.
+    """
     return (
         cast(FilterService, current_app.extensions["filter_service"]),
         cast(StatisticsService, current_app.extensions["statistics_service"]),

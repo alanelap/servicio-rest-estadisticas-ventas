@@ -61,10 +61,12 @@ class IngestionCase:
 
     @property
     def artifacts(self) -> tuple[Path, ...]:
+        """Agrupa las rutas de todos los artefactos publicados por la ingesta."""
         return (self.parquet, self.summary, self.metadata, self.quality)
 
 
 def _build_case(tmp_path: Path) -> IngestionCase:
+    """Crea un servicio de ingesta completamente aislado dentro de ``tmp_path``."""
     root = tmp_path / "workspace"
     root.mkdir()
     source = root / "ventas.csv"
@@ -87,12 +89,14 @@ def _build_case(tmp_path: Path) -> IngestionCase:
 
 
 def _read_json(path: Path) -> dict[str, Any]:
+    """Lee un artefacto JSON y afirma que su raíz sea un objeto."""
     value = json.loads(path.read_text(encoding="utf-8"))
     assert isinstance(value, dict)
     return value
 
 
 def _read_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
+    """Devuelve cabeceras y filas normalizadas a texto desde un CSV de prueba."""
     with path.open(encoding="utf-8", newline="") as stream:
         reader = csv.DictReader(stream)
         assert reader.fieldnames is not None
@@ -110,6 +114,7 @@ def _write_csv(
     *,
     delimiter: str = ",",
 ) -> None:
+    """Escribe un CSV determinista para construir escenarios de ingesta."""
     with path.open("w", encoding="utf-8", newline="") as stream:
         writer = csv.DictWriter(
             stream,
@@ -122,6 +127,7 @@ def _write_csv(
 
 
 def _app_config(case: IngestionCase) -> dict[str, Any]:
+    """Construye la configuración Flask asociada a un caso temporal de ingesta."""
     return {
         "TESTING": True,
         "APP_ENV": "testing",

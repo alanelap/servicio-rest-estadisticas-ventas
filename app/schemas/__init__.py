@@ -1,4 +1,4 @@
-"""Esquemas Marshmallow públicos."""
+"""Publica los esquemas Marshmallow usados por validación y OpenAPI."""
 
 from app.schemas.errors import ErrorSchema
 from app.schemas.filters import GetFiltersSchema, PostFiltersSchema, QueryItemSchema

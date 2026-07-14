@@ -23,6 +23,7 @@ _PROBLEM_KEYS = {
 
 
 def _assert_utc_timestamp(raw: str) -> None:
+    """Comprueba que un timestamp contractual represente un instante UTC."""
     assert raw.endswith("Z")
     parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
     assert parsed.tzinfo == UTC

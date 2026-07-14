@@ -23,6 +23,7 @@ STATISTIC_FIELDS = {
 
 
 def _expected(*amounts: float) -> dict[str, float | int]:
+    """Calcula con Python el resultado esperado para una consulta POST con datos."""
     values = list(amounts)
     return {
         "suma": sum(values),
@@ -36,6 +37,7 @@ def _expected(*amounts: float) -> dict[str, float | int]:
 
 
 def _assert_statistics(response: TestResponse, expected: dict[str, float | int]) -> dict[str, Any]:
+    """Valida el contrato de éxito y compara sus métricas con el resultado esperado."""
     assert response.status_code == 200
     assert response.mimetype == "application/json"
     payload = response.get_json()

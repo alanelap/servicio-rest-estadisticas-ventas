@@ -1,10 +1,14 @@
-"""Enumeraciones del contrato público."""
+"""Valores enumerados que forman parte del contrato público de filtros."""
 
 from enum import StrEnum
 
 
 class FilterName(StrEnum):
-    """Filtros admitidos exactamente por la API."""
+    """Nombres canónicos de los filtros admitidos por la API.
+
+    Sus valores preservan mayúsculas y guiones bajos porque se comparan con las
+    claves recibidas en el contrato HTTP.
+    """
 
     GENERO = "GENERO"
     EDAD = "EDAD"
@@ -17,7 +21,7 @@ class FilterName(StrEnum):
 
 
 class Gender(StrEnum):
-    """Valores públicos normalizados de género."""
+    """Valores de género normalizados que la API expone al cliente."""
 
     UNSPECIFIED = "No especificado"
     MALE = "Masculino"
@@ -26,7 +30,7 @@ class Gender(StrEnum):
 
 
 class Channel(StrEnum):
-    """Canales de venta válidos."""
+    """Códigos de canal de venta aceptados por los filtros públicos."""
 
     POS = "POS"
     WEB = "WEB"

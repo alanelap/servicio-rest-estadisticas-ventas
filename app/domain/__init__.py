@@ -1,4 +1,4 @@
-"""Entidades y reglas de dominio."""
+"""Publica entidades, reglas y excepciones independientes del transporte HTTP."""
 
 from app.domain.enums import Channel, FilterName, Gender
 from app.domain.exceptions import (

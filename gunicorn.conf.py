@@ -1,4 +1,10 @@
-"""Configuración de producción para Gunicorn."""
+"""Parámetros de ejecución segura y predecible para Gunicorn.
+
+El servidor usa procesos síncronos sin precarga para que cada worker construya
+su propia aplicación. El access log predeterminado se desactiva porque puede
+incluir consultas con identificadores personales; Flask emite eventos HTTP JSON
+con campos controlados y redacción por patrones desde sus hooks de observabilidad.
+"""
 
 import os
 
@@ -12,8 +18,6 @@ keepalive = 5
 preload_app = False
 max_requests = 1000
 max_requests_jitter = 100
-# El formato predeterminado registra la query completa (incluido ID_PERSONA).
-# Los eventos HTTP seguros y estructurados los emite la aplicación.
 accesslog = None
 errorlog = "-"
 capture_output = True

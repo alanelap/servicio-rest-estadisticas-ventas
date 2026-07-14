@@ -1,4 +1,10 @@
-"""Validación central del snapshot analítico publicado."""
+"""Validación integral de una generación de artefactos analíticos.
+
+El snapshot se acepta solo cuando Parquet, metadatos, resumen y reporte de
+calidad pertenecen a la misma generación y satisfacen el esquema y los conteos
+esperados. Centralizar estas invariantes evita criterios distintos entre el
+endpoint de preparación y las consultas estadísticas.
+"""
 
 from __future__ import annotations
 
@@ -34,7 +40,18 @@ _QUALITY_REASONS = {
 
 @dataclass(frozen=True, slots=True)
 class SnapshotState:
-    """Manifest y estadísticas de una generación completamente validada."""
+    """Estado validado cuyos campos no pueden reasignarse.
+
+    La dataclass es ``frozen``, pero los diccionarios contenidos siguen siendo
+    mutables; el contrato no ofrece inmutabilidad profunda.
+
+    Attributes:
+        generation_id: UUID canónico compartido por los cuatro artefactos.
+        metadata: Manifiesto de origen, esquema y publicación.
+        summary: Documento que contiene las estadísticas precomputadas.
+        quality: Reporte agregado de filas válidas, descartadas y sus motivos.
+        statistics: Estadísticas convertidas al modelo de dominio.
+    """
 
     generation_id: str
     metadata: dict[str, Any]
@@ -52,8 +69,31 @@ def validate_snapshot(
     schema_version: int,
     stat_target_column: str,
 ) -> SnapshotState:
-    """Exige una única generación, esquema exacto, conteos y JSON finitos."""
+    """Valida que todos los artefactos formen un snapshot coherente.
 
+    La validación cubre presencia, UUID de generación, versión de esquema,
+    columnas y tipos físicos, conteos cruzados, motivos de descarte, timestamps
+    y el contrato numérico del resumen.
+
+    Args:
+        processed_path: Ruta del snapshot Parquet.
+        summary_path: Ruta de las estadísticas precomputadas en JSON.
+        metadata_path: Ruta del manifiesto de la generación en JSON.
+        quality_report_path: Ruta del reporte de calidad en JSON.
+        schema_version: Versión exacta de esquema esperada.
+        stat_target_column: Nombre contractual de la columna estadística.
+
+    Returns:
+        Estado con referencias no reasignables a los documentos y estadísticas
+        ya validados; los diccionarios contenidos conservan su mutabilidad.
+
+    Raises:
+        ValueError: Si falta un artefacto o cualquier invariante de generación,
+            esquema, conteo, calidad o estadística no se cumple.
+        OSError: Si un documento JSON no puede abrirse o leerse.
+        polars.exceptions.PolarsError: Si Polars no puede inspeccionar el
+            esquema Parquet.
+    """
     for path in (processed_path, summary_path, metadata_path, quality_report_path):
         if not path.is_file():
             raise ValueError(f"Falta el artefacto {path.name}")
@@ -113,8 +153,19 @@ def validate_snapshot(
 
 
 def validate_statistics_payload(payload: object) -> StatisticsResult:
-    """Convierte un resumen JSON solo si respeta el contrato numérico exacto."""
+    """Convierte un resumen JSON que respete exactamente el contrato numérico.
 
+    Args:
+        payload: Valor deserializado del campo ``statistics``.
+
+    Returns:
+        Modelo de dominio con números finitos. Para un conjunto vacío devuelve
+        suma y conteo cero, y las demás métricas en ``None``.
+
+    Raises:
+        ValueError: Si faltan o sobran campos, los tipos son inválidos, algún
+            número no es finito o la semántica del conjunto vacío no coincide.
+    """
     if not isinstance(payload, dict):
         raise ValueError("El resumen estadístico no es un objeto")
     expected = {
@@ -155,6 +206,18 @@ def validate_statistics_payload(payload: object) -> StatisticsResult:
 
 
 def _generation_id(value: object) -> str:
+    """Exige un UUID textual no vacío y en su representación canónica.
+
+    Args:
+        value: Identificador deserializado desde un artefacto JSON.
+
+    Returns:
+        El mismo identificador validado.
+
+    Raises:
+        ValueError: Si no es texto, está vacío, no es un UUID o no está
+            canonizado.
+    """
     if not isinstance(value, str) or not value:
         raise ValueError("Falta generation_id")
     try:
@@ -167,12 +230,37 @@ def _generation_id(value: object) -> str:
 
 
 def _nonnegative_integer(value: object, label: str) -> int:
+    """Valida un entero no negativo rechazando booleanos implícitos.
+
+    Args:
+        value: Valor que debe ser un ``int`` mayor o igual que cero.
+        label: Nombre usado para contextualizar el error.
+
+    Returns:
+        Entero validado sin conversión coercitiva.
+
+    Raises:
+        ValueError: Si el valor es booleano, no es entero o es negativo.
+    """
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"{label} no es un entero no negativo")
     return value
 
 
 def _finite_float(value: object, label: str) -> float:
+    """Convierte un número real a ``float`` y exige que sea finito.
+
+    Args:
+        value: Entero o flotante que representa una métrica estadística.
+        label: Nombre usado para contextualizar el error.
+
+    Returns:
+        Número convertido a ``float`` finito.
+
+    Raises:
+        ValueError: Si el valor es booleano, no es numérico, no puede
+            representarse como ``float`` o es infinito/NaN.
+    """
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{label} no es numérica")
     try:

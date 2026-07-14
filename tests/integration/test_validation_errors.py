@@ -44,6 +44,7 @@ def _assert_problem(
     instance: str = ENDPOINT,
     detail_contains: str | None = None,
 ) -> dict[str, Any]:
+    """Valida todos los campos del error contractual y devuelve su cuerpo."""
     assert response.status_code == status
     assert response.mimetype == "application/json"
     payload = response.get_json()

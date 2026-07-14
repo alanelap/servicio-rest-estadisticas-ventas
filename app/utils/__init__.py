@@ -1,1 +1,1 @@
-"""Utilidades transversales."""
+"""Utilidades transversales para fechas, archivos, locks y snapshots."""

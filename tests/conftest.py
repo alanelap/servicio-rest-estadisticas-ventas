@@ -19,7 +19,6 @@ _FIXTURE_CSV = Path(__file__).parent / "fixtures" / "ventas.csv"
 @pytest.fixture
 def test_paths(tmp_path: Path) -> dict[str, Path]:
     """Copia el CSV y define todos los artefactos dentro del directorio temporal."""
-
     dataset = tmp_path / "ventas.csv"
     shutil.copy2(_FIXTURE_CSV, dataset)
     processed = tmp_path / "processed"
@@ -36,7 +35,6 @@ def test_paths(tmp_path: Path) -> dict[str, Path]:
 @pytest.fixture
 def app(test_paths: dict[str, Path]) -> Iterator[Flask]:
     """Crea una aplicación sin estado compartido y con rutas temporales."""
-
     application = create_app(
         {
             "TESTING": True,
@@ -56,7 +54,6 @@ def app(test_paths: dict[str, Path]) -> Iterator[Flask]:
 @pytest.fixture
 def ingestion_service(app: Flask) -> IngestionService:
     """Expone la instancia cableada por la factory para pruebas de ingesta."""
-
     service = app.extensions["ingestion_service"]
     assert isinstance(service, IngestionService)
     return service
@@ -65,7 +62,6 @@ def ingestion_service(app: Flask) -> IngestionService:
 @pytest.fixture
 def client(app: Flask, ingestion_service: IngestionService) -> Iterator[FlaskClient]:
     """Entrega un cliente cuya copia temporal del fixture ya fue procesada."""
-
     ingestion_service.ingest()
     with app.test_client() as test_client:
         yield test_client

@@ -1,4 +1,8 @@
-"""Acceso analítico desacoplado basado en Parquet y Polars."""
+"""Repositorio de consultas analíticas sobre snapshots Parquet validados.
+
+Esta capa encapsula el acceso a disco, la validación de consistencia entre
+artefactos y la traducción de filtros de dominio a expresiones Polars.
+"""
 
 from __future__ import annotations
 
@@ -21,7 +25,11 @@ _TARGET_MAPPING = {
 
 
 class SalesRepository:
-    """Consulta artefactos publicados atómicamente por la ingesta."""
+    """Consulta una generación coherente publicada por el proceso de ingesta.
+
+    Las lecturas se protegen con un lock compartido para impedir que una
+    publicación concurrente mezcle artefactos de generaciones distintas.
+    """
 
     def __init__(
         self,
@@ -31,6 +39,19 @@ class SalesRepository:
         quality_report_path: Path,
         stat_target_column: str,
     ) -> None:
+        """Inicializa las rutas y valida la columna estadística contractual.
+
+        Args:
+            processed_path: Ruta del dataset analítico en formato Parquet.
+            summary_path: Ruta del resumen estadístico precomputado.
+            metadata_path: Ruta del manifiesto de la generación.
+            quality_report_path: Ruta del reporte agregado de calidad.
+            stat_target_column: Nombre público o interno de la columna objetivo.
+
+        Raises:
+            RuntimeError: Si la columna objetivo no corresponde a
+                ``MONTO APLICADO``.
+        """
         try:
             self.target_column = _TARGET_MAPPING[stat_target_column]
         except KeyError as exc:
@@ -44,8 +65,21 @@ class SalesRepository:
         self.stat_target_column = stat_target_column
 
     def calculate(self, filters: SalesFilters) -> StatisticsResult:
-        """Aplica predicados conocidos y ejecuta agregaciones con pushdown."""
+        """Calcula estadísticas dinámicas aplicando filtros con *pushdown*.
 
+        Args:
+            filters: Filtros de dominio previamente validados.
+
+        Returns:
+            Resultado de las siete estadísticas contractuales para las filas
+            coincidentes.
+
+        Raises:
+            DataNotReadyError: Si el snapshot falta, es incoherente, no puede
+                leerse o no se obtiene el lock dentro del plazo.
+            StatisticsCalculationError: Si Polars no puede obtener o convertir
+                las agregaciones estadísticas del snapshot válido.
+        """
         started = time.perf_counter()
         try:
             with data_read_lock(self.processed_path):
@@ -55,6 +89,8 @@ class SalesRepository:
                 if predicates:
                     lazy = lazy.filter(*predicates)
 
+                # La importación local evita el ciclo entre el servicio estadístico
+                # y el repositorio, una decisión de ensamblaje entre ambas capas.
                 from app.services.statistics_service import statistics_from_lazyframe
 
                 result = statistics_from_lazyframe(lazy, self.target_column)
@@ -72,8 +108,15 @@ class SalesRepository:
         return result
 
     def load_cached_statistics(self) -> StatisticsResult:
-        """Lee y valida la caché global, sin recalcular el dataset."""
+        """Obtiene las estadísticas globales de una caché coherente y validada.
 
+        Returns:
+            Estadísticas precomputadas para todo el dataset válido.
+
+        Raises:
+            DataNotReadyError: Si algún artefacto falta, es incoherente, no es
+                legible o el lock de lectura expira.
+        """
         try:
             with data_read_lock(self.processed_path):
                 return self._validated_snapshot().statistics
@@ -81,8 +124,13 @@ class SalesRepository:
             raise DataNotReadyError("Los datos estadísticos aún no están preparados") from exc
 
     def readiness(self) -> tuple[bool, str]:
-        """Comprueba presencia, coherencia y legibilidad de los cuatro artefactos."""
+        """Comprueba presencia, coherencia y legibilidad de todos los artefactos.
 
+        Returns:
+            Par ``(disponible, estado)``. El estado es ``"ready"`` cuando la
+            generación es válida y ``"unreadable"`` ante cualquier fallo de
+            lectura, consistencia o adquisición del lock.
+        """
         try:
             with data_read_lock(self.processed_path):
                 self._validated_snapshot()
@@ -96,6 +144,16 @@ class SalesRepository:
         return True, "ready"
 
     def _validated_snapshot(self) -> SnapshotState:
+        """Valida y materializa el estado de la generación configurada.
+
+        Returns:
+            Snapshot con manifiesto, calidad y estadísticas ya validados.
+
+        Raises:
+            OSError: Si un artefacto no puede abrirse.
+            ValueError: Si los artefactos no satisfacen el contrato común.
+            polars.exceptions.PolarsError: Si Polars no puede leer el Parquet.
+        """
         return validate_snapshot(
             processed_path=self.processed_path,
             summary_path=self.summary_path,
@@ -107,6 +165,15 @@ class SalesRepository:
 
     @staticmethod
     def _predicates(filters: SalesFilters) -> list[pl.Expr]:
+        """Traduce filtros de dominio a predicados Polars combinables con AND.
+
+        Args:
+            filters: Filtros opcionales ya normalizados.
+
+        Returns:
+            Expresiones en el mismo orden estable del contrato público. Una
+            lista vacía representa una consulta sin filtros.
+        """
         expressions: list[pl.Expr] = []
         if filters.genero is not None:
             expressions.append(pl.col("genero_texto") == filters.genero)

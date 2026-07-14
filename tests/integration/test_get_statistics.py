@@ -23,6 +23,7 @@ STATISTIC_FIELDS = {
 
 
 def _expected(*amounts: float) -> dict[str, float | int | None]:
+    """Calcula con Python el resultado esperado para los montos del escenario."""
     values = list(amounts)
     if not values:
         return {
@@ -48,6 +49,7 @@ def _expected(*amounts: float) -> dict[str, float | int | None]:
 def _assert_statistics(
     response: TestResponse, expected: dict[str, float | int | None]
 ) -> dict[str, Any]:
+    """Valida el contrato JSON y compara cada estadística con el valor esperado."""
     assert response.status_code == 200
     assert response.mimetype == "application/json"
     payload = response.get_json()

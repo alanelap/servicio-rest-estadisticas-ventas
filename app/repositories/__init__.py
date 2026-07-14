@@ -1,4 +1,4 @@
-"""Puertos de acceso a datos."""
+"""Implementaciones públicas de acceso a los artefactos analíticos."""
 
 from app.repositories.sales_repository import SalesRepository
 

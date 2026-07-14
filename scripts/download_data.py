@@ -1,4 +1,11 @@
-"""Descarga de forma streaming el CSV oficial a una ruta segura del proyecto."""
+"""Descarga por streaming un recurso de datos y lo publica como CSV local.
+
+El archivo remoto se escribe primero en un temporal del directorio de destino,
+se sincroniza y solo entonces reemplaza atómicamente la ruta final. Esto evita
+dejar un archivo parcial si la red o el proceso fallan. La URL predeterminada
+apunta al dataset oficial, pero ``--url`` admite otro origen y el script no
+valida el esquema CSV ni una huella criptográfica del contenido.
+"""
 
 from __future__ import annotations
 
@@ -16,6 +23,16 @@ DEFAULT_URL = (
 
 
 def main() -> None:
+    """Ejecuta la descarga con controles básicos de ruta, tipo y tamaño.
+
+    Raises:
+        SystemExit: Si los argumentos son inválidos o la salida escapa de la
+            raíz del proyecto/no usa extensión ``.csv``.
+        RuntimeError: Si el servidor devuelve HTML, se supera el límite de
+            bytes o la descarga queda vacía.
+        OSError: Si falla una operación de red o la creación, escritura,
+            sincronización o publicación del archivo local.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=Path("data/ventas.csv"))
     parser.add_argument("--url", default=DEFAULT_URL)
@@ -57,6 +74,18 @@ def main() -> None:
 
 
 def _safe_destination(raw: Path) -> Path:
+    """Resuelve y valida una ruta de salida confinada a la raíz del proyecto.
+
+    Args:
+        raw: Ruta absoluta o relativa solicitada por el operador.
+
+    Returns:
+        Ruta absoluta resuelta con extensión ``.csv`` dentro del proyecto.
+
+    Raises:
+        SystemExit: Si la ruta resuelta escapa de :data:`PROJECT_ROOT` o no
+            termina en ``.csv``.
+    """
     destination = raw.expanduser()
     if not destination.is_absolute():
         destination = PROJECT_ROOT / destination

@@ -1,3 +1,4 @@
+# Interfaz estable para que desarrollo local y CI ejecuten los mismos comandos.
 PYTHON ?= python3
 CSV ?= data/ventas.csv
 FLASK_APP ?= app:create_app()

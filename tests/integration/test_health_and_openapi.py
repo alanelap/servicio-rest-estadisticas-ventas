@@ -47,6 +47,7 @@ FILTER_NAMES = {
 
 
 def _assert_unavailable_problem(response: TestResponse) -> dict[str, Any]:
+    """Comprueba el Problem Details contractual usado cuando el snapshot no está listo."""
     assert response.status_code == 503
     assert response.mimetype == "application/json"
     payload = response.get_json()

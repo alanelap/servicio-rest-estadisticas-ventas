@@ -1,4 +1,4 @@
-"""Esquemas de documentación y validación estructural de filtros."""
+"""Define la estructura pública de filtros para documentación y validación."""
 
 from __future__ import annotations
 
@@ -8,9 +8,15 @@ from app.domain.enums import Channel, FilterName, Gender
 
 
 class QueryItemSchema(Schema):
-    """Elemento individual de ``consultas``."""
+    """Representa un par nombre-valor dentro de la colección ``consultas``.
+
+    El esquema valida la forma y el nombre del filtro; la conversión semántica de
+    ``valor`` corresponde al servicio de filtros porque depende de ``consulta``.
+    """
 
     class Meta:
+        """Rechaza propiedades ajenas al contrato en cada elemento."""
+
         unknown = RAISE
 
     consulta = fields.String(
@@ -26,9 +32,16 @@ class QueryItemSchema(Schema):
 
 
 class PostFiltersSchema(Schema):
-    """Cuerpo obligatorio de POST."""
+    """Representa el cuerpo obligatorio para consultar filtros mediante POST.
+
+    Se admite como máximo un elemento por filtro definido. La detección explícita
+    de duplicados se realiza en el servicio, donde puede producirse un mensaje de
+    validación contextual.
+    """
 
     class Meta:
+        """Rechaza propiedades desconocidas en el objeto raíz."""
+
         unknown = RAISE
 
     consultas = fields.List(
@@ -40,9 +53,16 @@ class PostFiltersSchema(Schema):
 
 
 class GetFiltersSchema(Schema):
-    """Parámetros opcionales de GET usados para producir OpenAPI."""
+    """Describe los parámetros opcionales aceptados por una consulta GET.
+
+    Los ``data_key`` conservan los nombres en mayúsculas del contrato externo,
+    mientras los atributos Python permanecen en ``snake_case``. La normalización
+    completa de mayúsculas, UUID y límites temporales se delega al servicio.
+    """
 
     class Meta:
+        """Impide aceptar silenciosamente parámetros fuera del contrato."""
+
         unknown = RAISE
 
     genero = fields.String(
