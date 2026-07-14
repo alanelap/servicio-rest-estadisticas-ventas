@@ -1,0 +1,282 @@
+{
+  "descripcion": "Datos sintéticos y deterministas para validar la ingesta y las estadísticas de ventas.",
+  "privacidad": "Todos los nombres, RUN y UUID de este archivo fueron creados exclusivamente para pruebas y no representan personas reales.",
+  "nota_fixture_csv": "tests/fixtures/ventas.csv contiene solo las filas de casos_validos; los casos defectuosos se mantienen separados para probar políticas de calidad de datos.",
+  "casos_validos": [
+    {
+      "FECHA": "2026-01-15T09:00:00",
+      "CANAL": "POS",
+      "SKU": 1001,
+      "PRODUCTO": "PRODUCTO PRUEBA A",
+      "UNIDADES": 1,
+      "PORCENTAJE DESCUENTO": 0.0,
+      "MONTO APLICADO": 1000.5,
+      "BOLETA": 900001,
+      "LOCAL": 101,
+      "CODIGO CLIENTE": "3d8594a2-3d1e-3ffc-85ed-6a94f3baaaa9",
+      "RUN CLIENTE": "99.999.991-3",
+      "NOMBRES": "CLIENTE_PRUEBA_01",
+      "APELLIDOS": "APELLIDO_SINTETICO_01",
+      "FECHA NACIMIENTO": "1996-01-15",
+      "GÉNERO": 1
+    },
+    {
+      "FECHA": "2026-02-28T10:15:00",
+      "CANAL": "WEB",
+      "SKU": 1001,
+      "PRODUCTO": "PRODUCTO PRUEBA A",
+      "UNIDADES": 2,
+      "PORCENTAJE DESCUENTO": 0.05,
+      "MONTO APLICADO": 2000.0,
+      "BOLETA": 900002,
+      "LOCAL": 102,
+      "CODIGO CLIENTE": "3a780763-4d87-3a52-8134-a194ffac5009",
+      "RUN CLIENTE": "99.999.992-1",
+      "NOMBRES": "CLIENTE_PRUEBA_02",
+      "APELLIDOS": "APELLIDO_SINTETICO_02",
+      "FECHA NACIMIENTO": "1986-03-01",
+      "GÉNERO": 2
+    },
+    {
+      "FECHA": "2026-03-01T11:30:00",
+      "CANAL": "APP",
+      "SKU": 1001,
+      "PRODUCTO": "PRODUCTO PRUEBA A",
+      "UNIDADES": 3,
+      "PORCENTAJE DESCUENTO": 0.1,
+      "MONTO APLICADO": 3000.5,
+      "BOLETA": 900003,
+      "LOCAL": 103,
+      "CODIGO CLIENTE": "3bcf0a76-6aab-399c-94d3-d45cbd6907e5",
+      "RUN CLIENTE": "99.999.993-K",
+      "NOMBRES": "CLIENTE_PRUEBA_03",
+      "APELLIDOS": "APELLIDO_SINTETICO_03",
+      "FECHA NACIMIENTO": "2000-02-01",
+      "GÉNERO": 3
+    },
+    {
+      "FECHA": "2026-03-31T12:45:00",
+      "CANAL": "CCT",
+      "SKU": 1002,
+      "PRODUCTO": "PRODUCTO PRUEBA B",
+      "UNIDADES": 1,
+      "PORCENTAJE DESCUENTO": 0.15,
+      "MONTO APLICADO": 4000.0,
+      "BOLETA": 900004,
+      "LOCAL": 104,
+      "CODIGO CLIENTE": "0eb324a5-e9ab-3f9a-a152-fabcd2eee967",
+      "RUN CLIENTE": "99.999.994-8",
+      "NOMBRES": "CLIENTE_PRUEBA_04",
+      "APELLIDOS": "APELLIDO_SINTETICO_04",
+      "FECHA NACIMIENTO": "1975-12-31",
+      "GÉNERO": 0
+    },
+    {
+      "FECHA": "2026-04-10T14:00:00",
+      "CANAL": "APR",
+      "SKU": 1002,
+      "PRODUCTO": "PRODUCTO PRUEBA B",
+      "UNIDADES": 2,
+      "PORCENTAJE DESCUENTO": 0.2,
+      "MONTO APLICADO": 5000.5,
+      "BOLETA": 900005,
+      "LOCAL": 101,
+      "CODIGO CLIENTE": "cf3bd77e-a9eb-3bb0-a7cf-52f27b9810c7",
+      "RUN CLIENTE": "99.999.995-6",
+      "NOMBRES": "CLIENTE_PRUEBA_05",
+      "APELLIDOS": "APELLIDO_SINTETICO_05",
+      "FECHA NACIMIENTO": "2006-04-10",
+      "GÉNERO": 1
+    },
+    {
+      "FECHA": "2026-06-30T15:15:00",
+      "CANAL": "WPR",
+      "SKU": 1002,
+      "PRODUCTO": "PRODUCTO PRUEBA B",
+      "UNIDADES": 3,
+      "PORCENTAJE DESCUENTO": 0.25,
+      "MONTO APLICADO": 6000.0,
+      "BOLETA": 900006,
+      "LOCAL": 102,
+      "CODIGO CLIENTE": "afa7e3ae-a514-37e8-9e8e-05c79692f9f2",
+      "RUN CLIENTE": "99.999.996-4",
+      "NOMBRES": "CLIENTE_PRUEBA_06",
+      "APELLIDOS": "APELLIDO_SINTETICO_06",
+      "FECHA NACIMIENTO": "1990-07-02",
+      "GÉNERO": 2
+    },
+    {
+      "FECHA": "2026-07-01T16:30:00",
+      "CANAL": "POS",
+      "SKU": 1003,
+      "PRODUCTO": "PRODUCTO PRUEBA C",
+      "UNIDADES": 1,
+      "PORCENTAJE DESCUENTO": 0.3,
+      "MONTO APLICADO": 7000.5,
+      "BOLETA": 900007,
+      "LOCAL": 103,
+      "CODIGO CLIENTE": "fcda0415-08e9-31ba-a5c0-493fe35eb641",
+      "RUN CLIENTE": "99.999.997-2",
+      "NOMBRES": "CLIENTE_PRUEBA_07",
+      "APELLIDOS": "APELLIDO_SINTETICO_07",
+      "FECHA NACIMIENTO": "1960-01-05",
+      "GÉNERO": 3
+    },
+    {
+      "FECHA": "2026-08-20T17:45:00",
+      "CANAL": "WEB",
+      "SKU": 1003,
+      "PRODUCTO": "PRODUCTO PRUEBA C",
+      "UNIDADES": 2,
+      "PORCENTAJE DESCUENTO": 0.35,
+      "MONTO APLICADO": 8000.0,
+      "BOLETA": 900008,
+      "LOCAL": 104,
+      "CODIGO CLIENTE": "fce50ed1-9e82-3dc7-b695-3934cdbcca33",
+      "RUN CLIENTE": "99.999.998-0",
+      "NOMBRES": "CLIENTE_PRUEBA_08",
+      "APELLIDOS": "APELLIDO_SINTETICO_08",
+      "FECHA NACIMIENTO": "2010-08-20",
+      "GÉNERO": 0
+    },
+    {
+      "FECHA": "2026-09-09T09:05:00",
+      "CANAL": "APP",
+      "SKU": 1003,
+      "PRODUCTO": "PRODUCTO PRUEBA C",
+      "UNIDADES": 3,
+      "PORCENTAJE DESCUENTO": 0.4,
+      "MONTO APLICADO": 9000.5,
+      "BOLETA": 900009,
+      "LOCAL": 101,
+      "CODIGO CLIENTE": "0a1ff418-381c-3a19-9ec0-bfd4fc535e7c",
+      "RUN CLIENTE": "99.999.999-9",
+      "NOMBRES": "CLIENTE_PRUEBA_09",
+      "APELLIDOS": "APELLIDO_SINTETICO_09",
+      "FECHA NACIMIENTO": "1940-09-10",
+      "GÉNERO": 1
+    },
+    {
+      "FECHA": "2026-10-11T10:20:00",
+      "CANAL": "CCT",
+      "SKU": 1004,
+      "PRODUCTO": "PRODUCTO PRUEBA D",
+      "UNIDADES": 1,
+      "PORCENTAJE DESCUENTO": 0.45,
+      "MONTO APLICADO": 10000.0,
+      "BOLETA": 900010,
+      "LOCAL": 102,
+      "CODIGO CLIENTE": "956d28fa-9c51-3a26-b9f0-70f3d9c246fa",
+      "RUN CLIENTE": "100.000.000-7",
+      "NOMBRES": "CLIENTE_PRUEBA_10",
+      "APELLIDOS": "APELLIDO_SINTETICO_10",
+      "FECHA NACIMIENTO": "2020-10-10",
+      "GÉNERO": 2
+    },
+    {
+      "FECHA": "2026-11-29T11:35:00",
+      "CANAL": "APR",
+      "SKU": 1004,
+      "PRODUCTO": "PRODUCTO PRUEBA D",
+      "UNIDADES": 2,
+      "PORCENTAJE DESCUENTO": 0.5,
+      "MONTO APLICADO": 11000.5,
+      "BOLETA": 900011,
+      "LOCAL": 103,
+      "CODIGO CLIENTE": "03abbfc9-023a-359d-a9b1-88ebc3f4fe56",
+      "RUN CLIENTE": "100.000.001-5",
+      "NOMBRES": "CLIENTE_PRUEBA_11",
+      "APELLIDOS": "APELLIDO_SINTETICO_11",
+      "FECHA NACIMIENTO": "1980-11-30",
+      "GÉNERO": 3
+    },
+    {
+      "FECHA": "2026-12-01T12:50:00",
+      "CANAL": "WPR",
+      "SKU": 1004,
+      "PRODUCTO": "PRODUCTO PRUEBA D",
+      "UNIDADES": 3,
+      "PORCENTAJE DESCUENTO": 0.75,
+      "MONTO APLICADO": 12000.0,
+      "BOLETA": 900012,
+      "LOCAL": 104,
+      "CODIGO CLIENTE": "35457816-312a-3b0e-8974-3690120419d9",
+      "RUN CLIENTE": "100.000.002-3",
+      "NOMBRES": "CLIENTE_PRUEBA_12",
+      "APELLIDOS": "APELLIDO_SINTETICO_12",
+      "FECHA NACIMIENTO": "1999-12-01",
+      "GÉNERO": 0
+    }
+  ],
+  "casos_invalidos": [
+    {
+      "id": "sku_no_entero",
+      "motivo": "SKU debe ser un entero positivo; esta fila debe ser rechazada o descartada y contabilizada por la ingesta.",
+      "fila": {
+        "FECHA": "2026-05-15T13:00:00",
+        "CANAL": "POS",
+        "SKU": "NO-ENTERO",
+        "PRODUCTO": "PRODUCTO PRUEBA INVALIDO",
+        "UNIDADES": 1,
+        "PORCENTAJE DESCUENTO": 0.1,
+        "MONTO APLICADO": 2500.0,
+        "BOLETA": 999999,
+        "LOCAL": 101,
+        "CODIGO CLIENTE": "3d8594a2-3d1e-3ffc-85ed-6a94f3baaaa9",
+        "RUN CLIENTE": "99.999.991-3",
+        "NOMBRES": "CLIENTE_PRUEBA_INVALIDO",
+        "APELLIDOS": "APELLIDO_SINTETICO_INVALIDO",
+        "FECHA NACIMIENTO": "1990-01-01",
+        "GÉNERO": 1
+      }
+    }
+  ],
+  "escenarios_esperados": {
+    "global_mediana_par": {
+      "filtros": [],
+      "resultado": {
+        "suma": 78003.0,
+        "conteo": 12,
+        "promedio": 6500.25,
+        "minimo": 1000.5,
+        "maximo": 12000.0,
+        "mediana": 6500.25,
+        "desviacion_estandar": 3452.0163280562083
+      }
+    },
+    "local_101_mediana_impar": {
+      "filtros": [
+        {
+          "consulta": "LOCAL",
+          "valor": "101"
+        }
+      ],
+      "resultado": {
+        "suma": 15001.5,
+        "conteo": 3,
+        "promedio": 5000.5,
+        "minimo": 1000.5,
+        "maximo": 9000.5,
+        "mediana": 5000.5,
+        "desviacion_estandar": 3265.9863237109043
+      }
+    },
+    "canal_pos_mediana_par": {
+      "filtros": [
+        {
+          "consulta": "CANAL",
+          "valor": "POS"
+        }
+      ],
+      "resultado": {
+        "suma": 8001.0,
+        "conteo": 2,
+        "promedio": 4000.5,
+        "minimo": 1000.5,
+        "maximo": 7000.5,
+        "mediana": 4000.5,
+        "desviacion_estandar": 3000.0
+      }
+    }
+  }
+}

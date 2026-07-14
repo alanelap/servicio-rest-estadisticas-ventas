@@ -1,0 +1,45 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: production
+      FLASK_DEBUG: "0"
+      HOST: 0.0.0.0
+      PORT: "${PORT:-8000}"
+      WORKERS: "${WORKERS:-2}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      DATASET_PATH: data/ventas.csv
+      PROCESSED_DATA_PATH: data/processed/ventas.parquet
+      SUMMARY_CACHE_PATH: data/processed/statistics.json
+      METADATA_PATH: data/processed/metadata.json
+      QUALITY_REPORT_PATH: data/processed/quality_report.json
+      STAT_TARGET_COLUMN: MONTO APLICADO
+      AUTO_INGEST: "${AUTO_INGEST:-true}"
+      MAX_REQUEST_BODY_BYTES: "${MAX_REQUEST_BODY_BYTES:-16384}"
+      POLARS_MAX_THREADS: "${POLARS_MAX_THREADS:-4}"
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-8000}:${PORT:-8000}"
+    volumes:
+      - ./data/ventas.csv:/app/data/ventas.csv:ro
+      - processed-data:/app/data/processed
+    restart: unless-stopped
+    init: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${PORT:-8000}/health', timeout=3).read()"
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+
+volumes:
+  processed-data:
