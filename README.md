@@ -263,11 +263,11 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A["Validar CSV"] --> B["Normalizar y filtrar"]
-    B --> C["Generar generation_id"]
-    C --> D["Escribir Parquet temporal"]
+    A["Validar CSV"] --> B["Normalizar"]
+    B --> C["Asignar ID"]
+    C --> D["Escribir Parquet"]
     D --> E["Calcular resumen"]
-    E --> F["Publicar snapshot bajo lock"]
+    E --> F["Publicar snapshot"]
 ```
 
 El `generation_id` se genera antes de escribir el Parquet porque forma parte de sus metadatos.
