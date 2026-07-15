@@ -119,7 +119,7 @@ def test_get_applies_each_supported_scalar_filter(
     _assert_statistics(response, _expected(*amounts))
 
 
-def test_get_applies_inclusive_date_range_in_santiago_timezone(client: FlaskClient) -> None:
+def test_get_applies_inclusive_date_range_in_fixed_utc_minus_four(client: FlaskClient) -> None:
     response = client.get(
         ENDPOINT,
         query_string={"FECHA_DESDE": "2026-03-01", "FECHA_HASTA": "2026-04-10"},

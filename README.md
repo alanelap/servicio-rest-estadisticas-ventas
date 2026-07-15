@@ -488,8 +488,8 @@ pytest --cov=app --cov-report=term-missing
 | Docker | Imagen Python 3.12, UID 10001 y contenedor `healthy` |
 | HTTP real | `/health`, `/ready`, GET, POST, 400, `/docs` y `/openapi.json` aprobados |
 
-La verificación integral se ejecutó el 13 de julio de 2026 sobre la base funcional del commit
-`64ed41a`. GitHub Actions repite lint, formato, tipos y pruebas en cada push y pull request, sin
+La verificación integral se repitió el 14 de julio de 2026 sobre la versión publicada en la rama
+`main`. GitHub Actions repite lint, formato, tipos y pruebas en cada push y pull request, sin
 descargar el CSV real ni requerir Internet para los datos.
 
 ## Seguridad y privacidad

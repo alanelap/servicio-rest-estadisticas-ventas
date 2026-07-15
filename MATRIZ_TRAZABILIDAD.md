@@ -41,7 +41,7 @@ Esta matriz se creó **antes de la implementación** a partir de `Trabajo ReST(1
 | OF-33 | Respetar las 15 columnas y tipos del CSV oficial. | Constantes y normalización en `ingestion_service.py`; fixture CSV | Cumplido |
 | OF-34 | Proveer mecanismo para cargar el CSV compartido. | `DATASET_PATH`, CLI `--csv`, script de descarga opcional documentado | Cumplido |
 | OF-35 | Maximizar criterios de rúbrica: endpoints 30 %, errores 20 %, estadísticas 20 %, filtros 15 %, calidad 15 %. | Suite integral, lint, tipos, cobertura y documentación | Cumplido |
-| OF-36 | Entregar el repositorio GitHub agregando manualmente al académico `sebasalazar` antes del 17/07/2026 23:59:59.999999, hora continental de Chile. | Instrucción y fecha exacta en `README.md` (acción externa pendiente del estudiante) | Documentado; acción manual pendiente del estudiante |
+| OF-36 | Entregar el repositorio GitHub agregando manualmente al académico `sebasalazar` antes del 17/07/2026 23:59:59.999999, hora continental de Chile. | Repositorio público y sincronizado; instrucción y fecha exacta en `README.md` | Parcial: repositorio publicado; invitación manual pendiente |
 
 ## Requisitos complementarios del prompt
 
@@ -88,11 +88,11 @@ Esta matriz se creó **antes de la implementación** a partir de `Trabajo ReST(1
 
 ## Criterio de cierre
 
-Los estados describen la cobertura implementada de cada requisito. Las comprobaciones siguientes se ejecutaron sobre la versión definitiva. Solo queda pendiente la acción externa de publicar el repositorio y agregar manualmente al profesor como colaborador.
+Los estados describen la cobertura implementada de cada requisito. Las comprobaciones siguientes se ejecutaron sobre la versión entregable. El repositorio ya está publicado y sincronizado; solo queda pendiente la acción externa de agregar manualmente al profesor como colaborador.
 
 ## Evidencia de cierre
 
-| Comprobación por ejecutar sobre la versión definitiva | Resultado |
+| Comprobación ejecutada sobre la versión entregable | Resultado |
 |---|---|
 | `flask --app "app:create_app()" ingest-data --csv tests/fixtures/ventas.csv` | Aprobado: 12 válidas, 0 descartadas |
 | `ruff check .` | Aprobado: sin hallazgos |
