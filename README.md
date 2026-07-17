@@ -205,14 +205,6 @@ puede descargarse manualmente o mediante el script incluido:
 python scripts/download_data.py --output data/ventas.csv
 ```
 
-Para generar un CSV pequeño de demostración sin datos reales:
-
-```bash
-python scripts/generate_sample_data.py --output data/ventas_muestra.csv
-```
-
-El nombre alternativo evita sobrescribir `data/ventas.csv` si ya contiene el archivo oficial.
-
 ### Ingesta manual
 
 ```bash
